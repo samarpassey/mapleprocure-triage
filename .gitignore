@@ -2,3 +2,4 @@
 evaluation/results.json
 __pycache__/
 .venv/
+*.tmp

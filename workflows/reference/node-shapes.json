@@ -292,13 +292,7 @@
     "Loop Over Items": {
       "main": [
         [],
-        [
-          {
-            "node": "Replace Me",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     }
   },

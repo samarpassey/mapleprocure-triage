@@ -1,0 +1,72 @@
+{
+  "version": "2026-09-13.1",
+  "notes": [
+    "Read by the workflow and by the eval harness, and interpreted only by workflows/code/route.js, so the two cannot route differently.",
+    "The contract is what validate-classification.js holds model output to. Output that fails it is CLASSIFICATION_FAILED and never reaches these rules.",
+    "Rules are tried in order; the first whose conditions all hold wins. Conditions compare `relevance` or `criteria.<name>` for equality and are ANDed.",
+    "Order is load-bearing. `contradiction` must precede `not-relevant`, or output that calls a notice irrelevant while its own criteria say it is software in the target market would be dismissed with no human seeing it (docs/DESIGN-AMENDMENTS.md A2). It precedes the other review rules too, so a contradiction is always labelled as one.",
+    "`scope-unclear` precedes `not-relevant`, as in the design doc: an irrelevant verdict with unclear scope goes to review. Over-review is the safe direction.",
+    "`strong-match` requires all four criteria (A6). A rule may route to AUTO_MATCH or NOT_RELEVANT only when it requires the matching verdict; route.js refuses this file otherwise.",
+    "Anything no rule matches falls back to NEEDS_REVIEW. Confidence appears in no rule: it is not calibrated and routes nothing."
+  ],
+  "contract": {
+    "relevance": ["match", "uncertain", "not_relevant"],
+    "criteria": ["software_related", "currently_open", "scope_clear", "target_market_match"],
+    "categories": {
+      "enterprise_software": "Enterprise software",
+      "saas": "SaaS",
+      "it_services": "IT services",
+      "cloud_infrastructure": "Cloud infrastructure",
+      "procurement_technology": "Procurement technology",
+      "financial_management_systems": "Financial management systems",
+      "payments": "Payments",
+      "grants_management": "Grants management",
+      "budgeting_software": "Budgeting software",
+      "digital_transformation": "Digital transformation",
+      "other": "Other"
+    }
+  },
+  "rules": [
+    {
+      "id": "contradiction",
+      "basis": "Amendment A2",
+      "when": {
+        "relevance": "not_relevant",
+        "criteria.software_related": true,
+        "criteria.target_market_match": true
+      },
+      "route": "NEEDS_REVIEW_CONTRADICTION"
+    },
+    {
+      "id": "scope-unclear",
+      "basis": "Design doc §6",
+      "when": { "criteria.scope_clear": false },
+      "route": "NEEDS_REVIEW"
+    },
+    {
+      "id": "relevance-uncertain",
+      "basis": "Design doc §6",
+      "when": { "relevance": "uncertain" },
+      "route": "NEEDS_REVIEW"
+    },
+    {
+      "id": "strong-match",
+      "basis": "Design doc §6 and §7, amendment A6",
+      "when": {
+        "relevance": "match",
+        "criteria.software_related": true,
+        "criteria.currently_open": true,
+        "criteria.scope_clear": true,
+        "criteria.target_market_match": true
+      },
+      "route": "AUTO_MATCH"
+    },
+    {
+      "id": "not-relevant",
+      "basis": "Design doc §6",
+      "when": { "relevance": "not_relevant" },
+      "route": "NOT_RELEVANT"
+    }
+  ],
+  "fallback": { "id": "no-rule-matched", "route": "NEEDS_REVIEW" }
+}
