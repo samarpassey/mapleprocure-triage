@@ -1,7 +1,4 @@
 {
-  "updatedAt": "2026-09-14T00:39:52.855Z",
-  "createdAt": "2026-09-14T00:32:46.776Z",
-  "id": "YKW6bqG4rjV1HwwC",
   "name": "reference-node-shapes",
   "description": null,
   "active": false,
@@ -179,18 +176,6 @@
     },
     {
       "parameters": {},
-      "type": "n8n-nodes-base.noOp",
-      "name": "Replace Me",
-      "typeVersion": 1,
-      "position": [
-        1616,
-        112
-      ],
-      "id": "ea53c446-bb44-4b94-9396-0b6c3140ac40",
-      "placeholder": true
-    },
-    {
-      "parameters": {},
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
@@ -315,22 +300,6 @@
           }
         ]
       ]
-    },
-    "Replace Me": {
-      "main": [
-        [
-          {
-            "node": "Loop Over Items",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Merge",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
     }
   },
   "settings": {
@@ -338,37 +307,6 @@
     "binaryMode": "separate"
   },
   "staticData": null,
-  "meta": null,
   "nodeGroups": [],
-  "pinData": {},
-  "versionId": "1f3f8d67-622c-40e2-9283-c08c40fc5802",
-  "activeVersionId": null,
-  "versionCounter": 18,
-  "triggerCount": 0,
-  "sourceWorkflowId": null,
-  "tags": [],
-  "shared": [
-    {
-      "updatedAt": "2026-09-14T00:32:46.776Z",
-      "createdAt": "2026-09-14T00:32:46.776Z",
-      "role": "workflow:owner",
-      "workflowId": "YKW6bqG4rjV1HwwC",
-      "projectId": "nm4zeJhCkRGPEDTc",
-      "project": {
-        "updatedAt": "2026-09-13T22:55:29.992Z",
-        "createdAt": "2026-09-13T22:54:09.098Z",
-        "id": "nm4zeJhCkRGPEDTc",
-        "name": "Samarpartap Passey <samarpartapp@gmail.com>",
-        "type": "personal",
-        "icon": null,
-        "description": null,
-        "customTelemetryTags": [],
-        "creatorId": "023ce671-24c0-43f9-a18a-17006fa1ed3d"
-      }
-    }
-  ],
-  "versionMetadata": {
-    "name": null,
-    "description": null
-  }
+  "tags": []
 }
