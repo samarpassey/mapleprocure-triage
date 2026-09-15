@@ -8,9 +8,9 @@ business profile covering enterprise software, SaaS, IT services and cloud infra
 rules route the result. Clear matches and clear dismissals are decided automatically. Everything
 else goes to a review queue in Postgres, with the notice text and its source attached.
 
-A full run claims and classifies 150 notices in 30 seconds. 130 of the 150 are decided without a
-human: 42 matches and 88 dismissals. The other 20 go to review. The next run claims nothing, because
-every notice it finds is already claimed.
+The first full run claimed 150 notices and classified 149 in 30 seconds. 130 of the 150 were
+decided without a human: 42 matches and 88 dismissals. The other 20 went to review. The next run
+claimed nothing, because every notice it found was already claimed.
 
 ## Pipeline
 
@@ -74,9 +74,11 @@ and a person sees it.
 
 **Provenance is carried end to end.** Every routed row carries its reference number, the source
 file, MapleProcure's ingestion time, the file's last-modified date and row count, the model, the
-prompt version, the rules version and a hash of the input. These come from MapleProcure's response,
-not from the model. Twelve `CHECK` constraints enforce the state invariants in Postgres. One of them refuses any
-routed row without its provenance.
+prompt version, the rules version and a hash of the input. The source file, MapleProcure's ingestion
+time, the file's last-modified date and row count come from MapleProcure's response. The model and
+the input hash come from the classification request and its reply. The prompt version and rules
+version are written by the pipeline from `config/`. Twelve `CHECK` constraints enforce the state
+invariants in Postgres. One of them refuses any routed row without its provenance.
 
 **Search fans out across 13 concepts.** MapleProcure's search requires every term in a query to
 match. One query holding the whole business profile matches nothing. `config/search-profile.json`
@@ -138,3 +140,6 @@ docker compose exec postgres psql -U n8n -d triage -c \
    WHERE status IN ('NEEDS_REVIEW', 'NEEDS_REVIEW_CONTRADICTION', 'CLASSIFICATION_FAILED')
    ORDER BY closing_date NULLS LAST"
 ```
+
+`evaluation/` holds a command-line tool for hand-labelling sampled notices against the same three
+outcomes the router produces. `make label` runs it.

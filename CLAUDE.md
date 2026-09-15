@@ -79,7 +79,7 @@ database/queries/     every statement the workflow runs, one per file, parameter
 database/tests/       SQL assertions, run by `make db-test`
 workflows/reference/  node-shapes.json — ground truth for workflow JSON
 workflows/code/       Code node logic; tests in workflows/code/test/
-evaluation/           labelling CLI and sampling; labelled-notices.json is committed
+evaluation/           labelling CLI and sampling; labelled-notices.json is generated and gitignored
 docs/                 DECISIONS.md, DESIGN-AMENDMENTS.md
 ```
 
