@@ -197,3 +197,128 @@ The full text and envelope provenance are frozen into the file at draw time, bec
 file drops closed notices within weeks. The labelling prompt does not show which stratum a notice
 came from: knowing it was drawn as a near-miss is a hint toward "uncertain". Defaults — one notice
 per concept and two per near-miss, at most 27 — sit inside the doc's 20–30.
+
+### 2026-09-14 — Scope cut: a working pipeline tonight over a measured one
+
+The plan had an evaluation track: a person-labelled set of notices, a harness scoring the classifier
+against it, `make eval`, prompt tuning against the scores, and a form for deciding review-queue
+rows. None of it sits on the path from a schedule to a routed row in Postgres, and all of it was
+still ahead. It is cut, not deferred. What ships tonight is the pipeline: search, merge, claim,
+classify, route, record.
+
+Entries above about the evaluation set and the harness record what was decided at the time. They
+no longer describe planned work. `evaluation/label.py` stays in the repository, unused by the
+pipeline. Tests cover what the workflow executes at run time and nothing else new. The classifier
+prompt is written once and not tuned. Review happens in the `triage_results` table.
+
+The cut does not touch claim-based dedup, recovery with fencing and the attempt cap, `PENDING` as a
+state, provenance on every classified row, deterministic routing with a review fallback, the
+contradiction rule ahead of every other rule, no rule auto-routing against the model's own verdict,
+closed notices filtered and listed, no date filter sent, or unknown search parameters blocked
+client-side.
+
+### 2026-09-14 — Overruled: the triage row stores the notice text
+
+This supersedes "The triage row stores a hash of the model's input, not the notice text". With the
+review form cut, the review queue is the `triage_results` table itself. A `NEEDS_REVIEW` row a person
+cannot read is not a review queue, and once a notice closes and leaves the open-tender file,
+MapleProcure cannot return its text. `notice_text` holds exactly what the model was sent, and the
+provenance constraint requires it on every classified row. `input_sha256` stays, for change
+detection. `record-classification.sql` computes it from the text it stores, so the two cannot
+disagree.
+
+### 2026-09-14 — Overruled: `currently_open` is not a criterion
+
+`merge-results.js` removes every notice whose closing date has passed before anything is claimed,
+so every notice the model reads is open by construction. Asking the model to assert it adds a
+field the model can only guess at, and that field sat inside the `AUTO_MATCH` rule. It is gone from
+the contract, the prompt and the response schema. `AUTO_MATCH` requires `relevance: match` with
+`software_related`, `scope_clear` and `target_market_match` all true. `route.js` refuses a rule that
+names `currently_open`, because the contract no longer has it.
+
+### 2026-09-14 — Confidence is a floor on automatic routes
+
+The earlier rule was that confidence routes nothing. It now holds notices back, and does nothing
+else. When the rule that fired would decide a notice without a human and the model's confidence is
+below `confidence_floor.min` in `config/routing-rules.json`, the notice goes to `NEEDS_REVIEW` with
+`routing_rule` set to `below-confidence-floor`. Confidence never authorizes a route: a notice headed
+for review goes to review at any confidence, and a test pins that.
+
+The floor applies to `NOT_RELEVANT` as well as `AUTO_MATCH`. A dismissal the model was unsure of is
+the silent loss the contradiction rule exists to prevent. Nothing terminal happens without a clear
+verdict and high confidence, or a person. The threshold is 0.8, a config value. `route.js` refuses a
+floor of 0, so the floor cannot be switched off without anyone noticing. The response schema cannot
+express a numeric range, so `validate-classification.js` still checks that confidence lies from 0
+to 1.
+
+### 2026-09-14 — A match outside the target market is a contradiction
+
+`relevance: match` with `target_market_match: false` is two incompatible statements, like the
+`not_relevant` case. It used to reach plain `NEEDS_REVIEW` through the fallback. It now has its own
+rule, `contradiction-match-off-market`, routing to `NEEDS_REVIEW_CONTRADICTION`. Both contradiction
+rules come before every other rule, so a contradiction is always labelled as one.
+
+### 2026-09-14 — Structured outputs shape the classifier's reply; validation still runs
+
+`prepare-classification.js` sets `output_config.format` to a JSON schema generated at run time from
+the contract in `config/routing-rules.json`. The schema, the validator and the rules therefore share
+one vocabulary. Every object sets `additionalProperties: false` and lists every property in
+`required`. Every response still goes through `validate-classification.js`. A refusal or a
+`max_tokens` stop can return text that does not match the schema, and the schema cannot bound
+confidence. The request opts into the API's server-side refusal fallback, which can answer with
+another model, so `model_name` is read from the response.
+
+### 2026-09-14 — Module source, config and SQL are inlined into the workflow at generation
+
+`workflows/build.js` writes `workflows/procurement-triage.json`. Each node starts as a copy of its
+type in the reference export. Code nodes get the modules and config files inlined, and Postgres
+nodes get the statements from `database/queries/` verbatim. Reading files at run time would mean
+enabling filesystem access for Code nodes, or adding file nodes that are not in the reference export
+plus a mount for `config/`. Generation keeps the imported workflow self-contained. It also puts
+every behaviour change in a reviewable diff of one file. The workflow version written onto claimed
+rows is a hash of everything the generator reads. `prompt_version` and `rules_version` are written
+onto every classified row.
+
+### 2026-09-14 — A lookup with no rows, or a call that keeps failing, leaves the claim to recovery
+
+For a reference that has left the open-tender file, `GET /v1/tenders/{reference}` returns `200` with
+`rows: []`. `prepare-classification.js` reads "not found" from the body, never from the status. On
+the false branch of `Notice found?` nothing is written and the row stays `PENDING`. `recover.sql`
+reclaims it after an hour, and after the third attempt it becomes `PROCESSING_FAILED`. A notice that
+closed between search and lookup ends there, with no classification invented for it. A transient
+empty response, such as MapleProcure rebuilding its database, gets retried. The detail fetch and the
+Anthropic call take the same path after their node-level retries (`onError: continueRegularOutput`),
+so one failing notice cannot stop the rest of its batch.
+
+### 2026-09-14 — No error workflow, and no notifications
+
+The error handler was to be Error Trigger, format, notify. The notify step has nowhere to send: no
+notification channel is configured and n8n holds no notification credential. Failures are handled
+at node level instead. Every call out of n8n has `retryOnFail`, and a notice that still fails is
+left to recovery. A failed execution shows in n8n's execution list. For the same reason no
+notification is sent for `AUTO_MATCH`. The routed row in `triage_results` is the output.
+
+### 2026-09-14 — A Manual Trigger beside the schedule
+
+The design allows manual runs. `n8n execute --id` refuses a workflow whose only trigger is a Schedule
+Trigger: it starts only from a Manual Trigger or an Execute Workflow Trigger, verified against the
+instance. So the workflow has both a schedule and a Manual Trigger, feeding the same first node. The
+Manual Trigger shape was exported from the instance into `workflows/reference/node-shapes.json`
+before use.
+
+### 2026-09-14 — Secrets live in `.env` or n8n's encrypted credential store
+
+Invariant 11 said secrets live only in `.env`. The system never worked that way, and should not.
+The Anthropic API key is an n8n credential, encrypted at rest with `N8N_ENCRYPTION_KEY`, and no node
+reads it from the environment. Copying it into `.env` would add a plaintext copy that nothing reads.
+`.env` holds what the containers and the local tools read at start: the Postgres password, the
+encryption key, and the MapleProcure URL and token for `evaluation/label.py`. The invariant now
+reads: secrets live in `.env` or n8n's encrypted credential store, never in workflow JSON or
+committed files. Workflow JSON names credentials and never contains them.
+
+### 2026-09-14 — The design document is not kept in the repository
+
+The original design was a PDF at the repo root, cited by section. It is removed from the tree and
+from history, and ignored. `docs/DESIGN-AMENDMENTS.md` now restates what the original said wherever
+the build departs from it, and lists the sections that `config/` and the tests cite, so every
+reference resolves without the PDF.

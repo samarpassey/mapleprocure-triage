@@ -1,7 +1,7 @@
 # MapleProcure Triage
 
 An n8n automation layer over MapleProcure's REST API. On a schedule it searches open federal
-tenders, claims the ones it has not seen, has Claude classify each against a business profile,
+tenders, claims the ones it has not seen, has Codex classify each against a business profile,
 routes the result with deterministic rules and queues what the rules cannot decide for a human.
 Postgres holds triage state and the audit trail. n8n 2.38.7 and Postgres 18.6 in Docker Compose;
 Code node logic as plain JavaScript modules; the labelling CLI in stdlib Python.
@@ -12,8 +12,8 @@ The original design document is not in this repo. Where the build departs from i
 ## What this is not
 
 Not a search engine and not a copy of CanadaBuys — MapleProcure owns ingest, search and notice
-text. This repo stores what was *decided* about a notice, which source record the decision was
-based on, and the notice text the model read. Not a dashboard, not multi-tenant, not an auth project, not a chatbot, not a replacement
+text. This repo stores what was *decided* about a notice and which source record the decision was
+based on. Not a dashboard, not multi-tenant, not an auth project, not a chatbot, not a replacement
 for MapleProcure.
 
 ## Commands
@@ -36,8 +36,7 @@ for MapleProcure.
    memory. A node type that is not in the export gets exported from the instance first.
 3. **The model proposes; `config/routing-rules.json` decides.** Rules are interpreted in one place,
    `workflows/code/route.js`, which both the workflow and the eval harness call. The fallback
-   route is always a review state. Confidence only holds a notice back: below `confidence_floor`
-   an automatic route becomes review. It never authorizes a route.
+   route is always a review state. Confidence never routes anything.
 4. **Dedup is a claim, not a check.** `INSERT … ON CONFLICT DO NOTHING RETURNING`. No
    select-then-act anywhere — recovery reclaims with a conditional `UPDATE`, and a result is
    written only by the execution that holds the claim.

@@ -2,9 +2,13 @@
 
 // Routes a validated classification using config/routing-rules.json.
 //
-// The only interpreter of that file. The workflow and the eval harness both call route(), so the
-// eval measures the routing that runs. Rules are tried in order and the first whose conditions all
+// The only interpreter of that file. Rules are tried in order and the first whose conditions all
 // hold wins; when none holds, the fallback applies. Order is load-bearing — see the file's notes.
+//
+// Confidence is a floor, not a key. When the rule that fired would decide a notice without a human
+// (AUTO_MATCH or NOT_RELEVANT) and the model's confidence is below confidence_floor.min, the notice
+// goes to the floor's review route instead. Confidence can hold a notice back for a person; it never
+// moves one toward an automatic decision.
 //
 // The rules file is checked on every call, and a file that could route unsafely is refused rather
 // than half-applied: an unknown field in a condition would otherwise make a rule silently never
@@ -32,8 +36,14 @@ function checkCondition(contract, where, path, value) {
   }
 }
 
+function checkReviewRoute(what, entry) {
+  if (!entry || typeof entry.id !== 'string' || entry.id === '' || !REVIEW.includes(entry.route)) {
+    throw new Error(`${what} must have an id and route to a review status`);
+  }
+}
+
 function checkRules(config) {
-  const { contract, rules, fallback } = config;
+  const { contract, rules, fallback, confidence_floor: floor } = config;
   const ids = new Set();
   for (const rule of rules) {
     const where = `rule "${rule.id}"`;
@@ -59,8 +69,10 @@ function checkRules(config) {
       );
     }
   }
-  if (!fallback || !REVIEW.includes(fallback.route) || typeof fallback.id !== 'string') {
-    throw new Error('fallback must have an id and route to a review status');
+  checkReviewRoute('fallback', fallback);
+  checkReviewRoute('confidence_floor', floor);
+  if (typeof floor.min !== 'number' || !(floor.min > 0 && floor.min <= 1)) {
+    throw new Error('confidence_floor.min must be a number above 0 and at most 1');
   }
 }
 
@@ -71,19 +83,18 @@ function valueAt(classification, path) {
   return classification.criteria[path.slice('criteria.'.length)];
 }
 
-// Returns { status, rule, rules_version } — rule is the id of the rule that fired, for the audit
-// trail's "why was this routed".
+// Returns { status, rule, rules_version } — rule is the id of the rule that fired, or of the
+// confidence floor when it held the notice back, for the audit trail's "why was this routed".
 function route(classification, config) {
   checkRules(config);
-  for (const rule of config.rules) {
-    const holds = Object.entries(rule.when).every(
-      ([path, value]) => valueAt(classification, path) === value,
-    );
-    if (holds) {
-      return { status: rule.route, rule: rule.id, rules_version: config.version };
-    }
-  }
-  return { status: config.fallback.route, rule: config.fallback.id, rules_version: config.version };
+  const matched = config.rules.find((rule) => Object.entries(rule.when).every(
+    ([path, value]) => valueAt(classification, path) === value,
+  )) || config.fallback;
+  const floor = config.confidence_floor;
+  const decided = matched.route in AUTOMATIC && !(classification.confidence >= floor.min)
+    ? floor
+    : matched;
+  return { status: decided.route, rule: decided.id, rules_version: config.version };
 }
 
 module.exports = { route, checkRules };

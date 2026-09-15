@@ -5,13 +5,12 @@ const assert = require('node:assert/strict');
 const { validateClassification } = require('../validate-classification');
 const { contract } = require('../../../config/routing-rules.json');
 
-// The design doc's own example output.
+// The design doc's own example output, without the `currently_open` criterion the contract dropped.
 const EXAMPLE = {
   category: 'enterprise_software',
   relevance: 'match',
   rationale: 'The notice requests an enterprise financial management platform.',
-  criteria: { software_related: true, currently_open: true, scope_clear: true,
-    target_market_match: true },
+  criteria: { software_related: true, scope_clear: true, target_market_match: true },
   confidence: 0.91,
 };
 
@@ -70,6 +69,7 @@ test('criteria must be exactly the contract criteria, each a real boolean', () =
   assert.deepEqual(errors, [
     'criteria.software_related: expected true or false',
     'criteria.target_market_match: missing',
+    'criteria.currently_open: not in the contract',
     'criteria.vibes: not in the contract',
   ]);
   assert.deepEqual(errorsFor({ ...EXAMPLE, criteria: [true, true] }),

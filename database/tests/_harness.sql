@@ -122,10 +122,10 @@ LANGUAGE sql AS $$
     SELECT (jsonb_build_object(
         'routed_status', routed, 'routing_rule', 'rule-under-test',
         'category', 'enterprise_software', 'relevance', 'match', 'rationale', 'Test rationale.',
-        'criteria', '{"software_related": true, "currently_open": true,
-                      "scope_clear": true, "target_market_match": true}'::jsonb,
+        'criteria', '{"software_related": true, "scope_clear": true,
+                      "target_market_match": true}'::jsonb,
         'model_confidence', 0.91, 'model_name', 'model-under-test',
-        'prompt_version', 'prompt-v0', 'rules_version', 'rules-v0', 'input_sha256', 'abc123',
+        'prompt_version', 'prompt-v0', 'rules_version', 'rules-v0', 'notice_text', 'Title: Test notice',
         'source_file', 'https://canadabuys.canada.ca/opendata/pub/openTenderNotice.csv',
         'source_as_of', '2026-09-14T00:19:57+00:00',
         'source_last_modified', 'Sun, 13 Sep 2026 10:20:16 GMT',

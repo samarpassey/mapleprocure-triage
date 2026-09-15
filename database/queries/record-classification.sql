@@ -4,6 +4,9 @@
 -- and still carry this execution's id. An execution whose claim was taken over by recover.sql
 -- gets no row back, which means "discard this result", not "retry".
 --
+-- notice_text is stored as sent to the model, and input_sha256 is computed here from it, so the
+-- stored hash cannot disagree with the stored text.
+--
 -- $1 text   tender reference
 -- $2 text   n8n execution id that claimed it
 -- $3 jsonb  one object with the keys named in the column list below. routed_status comes from
@@ -25,7 +28,8 @@ SET status               = c.routed_status,
     model_name           = c.model_name,
     prompt_version       = c.prompt_version,
     rules_version        = c.rules_version,
-    input_sha256         = c.input_sha256,
+    notice_text          = c.notice_text,
+    input_sha256         = encode(sha256(convert_to(c.notice_text, 'UTF8')), 'hex'),
     source_file          = c.source_file,
     source_as_of         = c.source_as_of,
     source_last_modified = c.source_last_modified,
@@ -35,7 +39,7 @@ SET status               = c.routed_status,
 FROM jsonb_to_record($3::jsonb) AS c(
     routed_status text, routing_rule text, category text, relevance text, rationale text,
     criteria jsonb, model_confidence numeric, validation_errors jsonb, model_output_raw text,
-    model_name text, prompt_version text, rules_version text, input_sha256 text,
+    model_name text, prompt_version text, rules_version text, notice_text text,
     source_file text, source_as_of timestamptz, source_last_modified timestamptz,
     source_row_count integer, source_notes jsonb
 )

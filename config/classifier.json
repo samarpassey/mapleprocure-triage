@@ -1,0 +1,13 @@
+{
+  "version": "2026-09-14.1",
+  "notes": [
+    "Settings for the classification call. The system prompt is config/classifier-prompt.md; workflows/build.js places both into the workflow, and every classified row records `version` as prompt_version.",
+    "The response schema is not written here. build-classification-request.js generates it from `contract` in config/routing-rules.json on every call, so the schema, the validator and the rules share one vocabulary.",
+    "`fallbacks` opts into the API's server-side refusal fallback, which needs the `beta` header on the request. A declined request is re-run on another model inside the same call, so model_name on the row is read from the response, not from `model`."
+  ],
+  "model": "claude-opus-5",
+  "max_tokens": 8000,
+  "effort": "medium",
+  "fallbacks": "default",
+  "beta": "server-side-fallback-2026-07-01"
+}

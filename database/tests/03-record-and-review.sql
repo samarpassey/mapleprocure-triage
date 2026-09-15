@@ -16,6 +16,10 @@ SELECT pg_temp.expect(
      FROM triage_results WHERE tender_reference = 'match'),
     'status, routing and provenance land, the HTTP date parsed to a timestamp');
 SELECT pg_temp.expect(
+    (SELECT notice_text = 'Title: Test notice' AND input_sha256 = 'f93be7dfb8a88d98060259c43a10bf82d3aea4d28bed5c19d64bfcddfaec2845'
+     FROM triage_results WHERE tender_reference = 'match'),
+    'the notice text the model read is stored, and its sha256 is computed from it');
+SELECT pg_temp.expect(
     pg_temp.run(pg_temp.q('record'), 'match', 'exec-a',
                 pg_temp.classification('NOT_RELEVANT', '{"relevance": "not_relevant"}')) = 0,
     'a second result for an already-classified row is refused');

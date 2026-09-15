@@ -1,6 +1,6 @@
--- Triage state: one row per tender reference, recording what was decided about a notice and which
--- MapleProcure source record the decision was based on. Not a copy of the notice — MapleProcure
--- owns the text.
+-- Triage state: one row per tender reference, recording what was decided about a notice, which
+-- MapleProcure source record the decision was based on, and the notice text the model read. The
+-- text is kept because this table is the review queue: a person reviews a row where it sits.
 --
 -- Status lifecycle (design doc "Workflow States", amended in docs/DESIGN-AMENDMENTS.md A1–A3):
 --
@@ -28,12 +28,15 @@ CREATE TABLE triage_results (
     notice_url            text,       -- null on ~6% of notices; never constructed
     matched_concepts      text[]      NOT NULL,  -- search-profile concepts that retrieved it
 
+    -- Exactly the notice text sent to the model, from the MapleProcure detail response.
+    notice_text           text,
+
     -- Classification output.
     category              text,
     relevance             text,
     rationale             text,
     criteria              jsonb,
-    model_confidence      numeric(4, 3),  -- stored for analysis; routes nothing
+    model_confidence      numeric(4, 3),  -- a floor on automatic routes only; see route.js
     validation_errors     jsonb,          -- set exactly when the output failed the contract
     model_output_raw      text,           -- what came back, kept when it failed the contract
 
@@ -41,7 +44,7 @@ CREATE TABLE triage_results (
     model_name            text,
     prompt_version        text,
     rules_version         text,
-    input_sha256          text,       -- hash of exactly what the model was sent
+    input_sha256          text,       -- sha256 of notice_text, computed by the statement that stores it
     workflow_version      text,
     execution_id          text        NOT NULL,  -- the n8n execution currently holding the claim
     attempts              smallint    NOT NULL DEFAULT 1,
@@ -96,7 +99,7 @@ CREATE TABLE triage_results (
             AND source_last_modified IS NOT NULL AND source_row_count IS NOT NULL
             AND model_name IS NOT NULL AND prompt_version IS NOT NULL
             AND rules_version IS NOT NULL AND input_sha256 IS NOT NULL
-            AND classified_at IS NOT NULL)),
+            AND notice_text IS NOT NULL AND classified_at IS NOT NULL)),
     CONSTRAINT routed_rows_have_classification CHECK (
         routed_status IS NULL
         OR routed_status = 'CLASSIFICATION_FAILED'

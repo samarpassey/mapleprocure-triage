@@ -1,4 +1,4 @@
-.PHONY: help db-apply db-test test label
+.PHONY: help db-apply db-test test workflow label
 
 COMPOSE ?= docker compose
 # No psql on the host: every SQL target runs the client inside the Postgres container.
@@ -24,6 +24,9 @@ db-test:  ## SQL assertions against a scratch database on the running Postgres
 test:  ## JavaScript module tests, Python tests, and the file-size cap
 	node --test workflows/code/test/
 	python3 -m unittest discover -s evaluation/tests -t .
+
+workflow:  ## Generate workflows/procurement-triage.json from config/, the modules and the queries
+	node workflows/build.js
 
 label:  ## Label the evaluation set, one notice at a time, resumably
 	python3 -m evaluation.label

@@ -1,17 +1,20 @@
 {
-  "version": "2026-09-13.1",
+  "version": "2026-09-14.1",
   "notes": [
-    "Read by the workflow and by the eval harness, and interpreted only by workflows/code/route.js, so the two cannot route differently.",
+    "Read by the workflow and interpreted only by workflows/code/route.js.",
     "The contract is what validate-classification.js holds model output to. Output that fails it is CLASSIFICATION_FAILED and never reaches these rules.",
     "Rules are tried in order; the first whose conditions all hold wins. Conditions compare `relevance` or `criteria.<name>` for equality and are ANDed.",
-    "Order is load-bearing. `contradiction` must precede `not-relevant`, or output that calls a notice irrelevant while its own criteria say it is software in the target market would be dismissed with no human seeing it (docs/DESIGN-AMENDMENTS.md A2). It precedes the other review rules too, so a contradiction is always labelled as one.",
+    "Order is load-bearing. The two contradiction rules come first, so a contradiction is always labelled as one. `contradiction-not-relevant` must precede `not-relevant`, or output that calls a notice irrelevant while its own criteria say it is software in the target market would be dismissed with no human seeing it (docs/DESIGN-AMENDMENTS.md A2).",
+    "`contradiction-match-off-market`: a match verdict whose own criteria say the notice is outside the target market is two incompatible statements, not an uncertain one (A8).",
     "`scope-unclear` precedes `not-relevant`, as in the design doc: an irrelevant verdict with unclear scope goes to review. Over-review is the safe direction.",
-    "`strong-match` requires all four criteria (A6). A rule may route to AUTO_MATCH or NOT_RELEVANT only when it requires the matching verdict; route.js refuses this file otherwise.",
-    "Anything no rule matches falls back to NEEDS_REVIEW. Confidence appears in no rule: it is not calibrated and routes nothing."
+    "`strong-match` requires a match verdict and all three criteria (A6). A rule may route to AUTO_MATCH or NOT_RELEVANT only when it requires the matching verdict; route.js refuses this file otherwise.",
+    "There is no `currently_open` criterion. merge-results.js removes closed notices before classification, so every notice the model reads is open by construction (A7).",
+    "`confidence_floor` applies only when the rule that fired would decide without a human. Below `min`, AUTO_MATCH and NOT_RELEVANT both become NEEDS_REVIEW, recorded as `below-confidence-floor`. Confidence only holds a notice back for a person; it never authorizes a route (A9).",
+    "Anything no rule matches falls back to NEEDS_REVIEW."
   ],
   "contract": {
     "relevance": ["match", "uncertain", "not_relevant"],
-    "criteria": ["software_related", "currently_open", "scope_clear", "target_market_match"],
+    "criteria": ["software_related", "scope_clear", "target_market_match"],
     "categories": {
       "enterprise_software": "Enterprise software",
       "saas": "SaaS",
@@ -28,12 +31,21 @@
   },
   "rules": [
     {
-      "id": "contradiction",
+      "id": "contradiction-not-relevant",
       "basis": "Amendment A2",
       "when": {
         "relevance": "not_relevant",
         "criteria.software_related": true,
         "criteria.target_market_match": true
+      },
+      "route": "NEEDS_REVIEW_CONTRADICTION"
+    },
+    {
+      "id": "contradiction-match-off-market",
+      "basis": "Amendment A8",
+      "when": {
+        "relevance": "match",
+        "criteria.target_market_match": false
       },
       "route": "NEEDS_REVIEW_CONTRADICTION"
     },
@@ -51,11 +63,10 @@
     },
     {
       "id": "strong-match",
-      "basis": "Design doc §6 and §7, amendment A6",
+      "basis": "Design doc §6 and §7, amendments A6 and A7",
       "when": {
         "relevance": "match",
         "criteria.software_related": true,
-        "criteria.currently_open": true,
         "criteria.scope_clear": true,
         "criteria.target_market_match": true
       },
@@ -68,5 +79,7 @@
       "route": "NOT_RELEVANT"
     }
   ],
+  "confidence_floor": { "id": "below-confidence-floor", "basis": "Amendment A9", "min": 0.8,
+    "route": "NEEDS_REVIEW" },
   "fallback": { "id": "no-rule-matched", "route": "NEEDS_REVIEW" }
 }
