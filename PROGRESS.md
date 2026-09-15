@@ -1,7 +1,7 @@
 # Progress
 
-One line per step of the build order in `PLAN.md`, updated when a step lands. What already
-existed before the scope cut is listed first.
+One line per step of the build order in `PLAN.md`, updated when a step lands. Components that
+predate the build order are listed first.
 
 | # | Component | Status | Notes |
 |---|---|---|---|

@@ -68,15 +68,14 @@ the classification, the rationale, the criteria and the rule that sent it there.
 validation is kept with its errors and raw text. Any reply no rule matches falls back to review.
 
 **Refusals are a recorded state.** Classification runs over unfiltered public data, and a model can
-decline a legitimate notice. The Claude API returned `stop_reason: refusal` on a legitimate public
-notice. The pipeline records a refusal as `CLASSIFICATION_FAILED` and routes it to review with the
-other states that need a person. The notice is kept with its text and provenance, and a person sees
-it.
+decline a legitimate notice. The pipeline records a refusal as `CLASSIFICATION_FAILED` and routes it
+to review with the other states that need a person. The notice is kept with its text and provenance,
+and a person sees it.
 
 **Provenance is carried end to end.** Every routed row carries its reference number, the source
 file, MapleProcure's ingestion time, the file's last-modified date and row count, the model, the
-prompt version, the rules version and a hash of the input. These come from the response Claude
-read. Twelve `CHECK` constraints enforce the state invariants in Postgres. One of them refuses any
+prompt version, the rules version and a hash of the input. These come from MapleProcure's response,
+not from the model. Twelve `CHECK` constraints enforce the state invariants in Postgres. One of them refuses any
 routed row without its provenance.
 
 **Search fans out across 13 concepts.** MapleProcure's search requires every term in a query to
