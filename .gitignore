@@ -1,7 +1,9 @@
 .env
 evaluation/results.json
+evaluation/labelled-notices.json
 __pycache__/
 .venv/
+node_modules/
 *.tmp
+.DS_Store
 MapleProcure Triage.pdf
-evaluation/labelled-notices.json

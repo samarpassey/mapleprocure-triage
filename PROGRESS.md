@@ -13,7 +13,7 @@ predate the build order are listed first.
 | 3 | Main triage workflow | ✅ done | `make workflow` writes 14 nodes. n8n's own validator: 0 errors, 0 warnings. Imported; every credential checked bound to its intended node after import |
 | 4 | Error handler workflow | ➖ not built | No notification channel exists (`docs/DECISIONS.md`) |
 | 5 | First live run | ✅ done | 2026-09-14 18:16 UTC, 30 s end to end. 13 searches returned 172 notices: 22 already closed and listed, 150 claimed and classified. 42 `AUTO_MATCH`, 88 `NOT_RELEVANT`, 19 `NEEDS_REVIEW` (7 scope unclear, 7 uncertain, 5 below the confidence floor), 0 contradictions, 1 `CLASSIFICATION_FAILED`. On every row the notice text starts with its own reference, the hash matches the text, and provenance is present. A second run claimed nothing |
-| 6 | README | ✅ done | Four sections, written against the runs above. The workflow is published; its first scheduled execution (7, 2026-09-14 19:35:56 UTC) searched all 13 concepts, claimed nothing new and succeeded |
+| 6 | README | ✅ done | Written against the runs above; reordered 2026-09-23 to lead with what it does and to put Run it before the pipeline. The workflow is published; its first scheduled execution (7, 2026-09-14 19:35:56 UTC) searched all 13 concepts, claimed nothing new and succeeded |
 
 ## Next step
 
